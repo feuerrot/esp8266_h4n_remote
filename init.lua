@@ -1,14 +1,20 @@
-uart_none, uart_init, uart_conn = 0, 1, 2
-uart_state = uart_none
+connected = 0
+
+function connect()
+	if (connected == 0) then
+		uart.write(0, 0x00)
+		tmr.start(0)
+	end
+end	
+
+function connect_d()
+	tmr.register(0, 500, tmr.ALARM_SEMI, connect)
+end
 
 function uart_hdl(data)
-	if (uart_state == uart_none) then
-		if (data == 0x80) then
-			uart_state = uart_init
-			uart.write(0, 0xA1)
-		end
-	elseif (uart_state == uart_init) then
-		uart_state = uart_conn
+	if (data == 0x80 and connected == 0) then
+		uart.write(0, 0xA1)
+		connected = 1
 	end
 end
 
@@ -18,24 +24,47 @@ function serial_init()
 	uart.on("data", 0, uart_hdl, 0)
 end
 
-function serial_settag()
+function gpio_init()
+	gpio.mode(1, gpio.INPUT)
+end
+
+function gpio_sense_h4n()
+	if (gpio.read(1) == 1) then
+		print("H4N connected")
+		serial_init()
+		connect_d()
+		connect()
+	else
+		print("H4N not connected")
+		tmr.start(1)
+	end
+end
+
+function gpio_sense_h4n_d()
+	tmr.register(1, 1000, tmr.ALARM_SEMI, gpio_sense_h4n)
+end
+
+function serial_settag_down()
 	uart.write(0, 0x81)
 	uart.write(0, 0x00)
-	tmr.delay(20000)
+	tmr.start(2)
+end
+
+function serial_settag_up()
 	uart.write(0, 0x80)
 	uart.write(0, 0x00)
 end
 
+function serial_settag_d()
+	tmr.register(2, 200, tmr.ALARM_SEMI, serial_settag_up)
+end
+
 function dostuff(conn,payload)
-	if uart_state == uart_none then
-		conn:send("not initialised")
-		uart.write(0, 0x00)
-	elseif uart_state == uart_init then
-		conn:send("initialized")
-		uart_state = uart_conn
-	elseif 	uart_state == uart_conn then
-		conn:send("Marker gesetzt")
-		serial_settag()
+	if (connected == 0) then
+		conn:send("not connected")
+	else
+		conn:send("Marker gesetzt(?)")
+		serial_settag_down()
 	end
 end
 
@@ -50,4 +79,8 @@ wifi.ap.dhcp.start()
 
 srv=net.createServer(net.TCP)
 srv:listen(80, handlecon)
-serial_init()
+
+serial_settag_d()
+gpio_init()
+gpio_sense_h4n_d()
+gpio_sense_h4n()
