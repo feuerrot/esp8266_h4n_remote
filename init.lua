@@ -12,16 +12,16 @@ function connect_d()
 end
 
 function uart_hdl(data)
-	if (data == 0x80 and connected == 0) then
+	if (connected == 0) then
 		uart.write(0, 0xA1)
 		connected = 1
 	end
 end
 
 function serial_init()
-	uart.alt(1)
 	uart.setup(0, 2400, 8, uart.PARITY_NONE, uart.STOPBITS_1, 0)
-	uart.on("data", 0, uart_hdl, 0)
+	uart.alt(1)
+	uart.on("data", 1, uart_hdl, 0)
 end
 
 function gpio_init()
