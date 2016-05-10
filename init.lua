@@ -1,4 +1,6 @@
 connected = 0
+t_notcon = "<html><body><a href='http://192.168.4.1'><p style='font-size: 20em;'>NOT CONNECTED</p></a></body></html>"
+t_button = "<html><body><a href='http://192.168.4.1'><p style='font-size: 20em;'>BUTTON</p></a></body></html>"
 
 function connect()
 	if (connected == 0) then
@@ -61,9 +63,9 @@ end
 
 function dostuff(conn,payload)
 	if (connected == 0) then
-		conn:send("not connected")
+		conn:send(t_notcon)
 	else
-		conn:send("Marker gesetzt(?)")
+		conn:send(t_button)
 		serial_settag_down()
 	end
 end
